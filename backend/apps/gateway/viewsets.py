@@ -42,6 +42,7 @@ class AgentViewSet(viewsets.ModelViewSet):
     queryset = Agent.objects.all()
     permission_classes = [AllowAny]
 
+    # type: ignore[override]
     def get_serializer_class(self):
         if self.action == "list":
             return AgentListSerializer
@@ -49,6 +50,7 @@ class AgentViewSet(viewsets.ModelViewSet):
             return AgentCreateSerializer
         return AgentDetailSerializer
 
+    # type: ignore[override]
     def perform_create(self, serializer):
         data = serializer.validated_data
         agent = Agent.objects.create(

@@ -45,7 +45,7 @@ class AgentDetailSerializer(serializers.ModelSerializer):
 class AgentCreateSerializer(serializers.Serializer):
     """创建 Agent 请求"""
     name = serializers.CharField(max_length=64)
-    mbti_type = serializers.ChoiceField(choices=MBTIConfig.objects.values_list("mbti_type", flat=True))
+    mbti_type = serializers.CharField(max_length=4)
     age = serializers.IntegerField(default=25, min_value=1)
     biography = serializers.CharField(required=False, allow_blank=True, default="")
     world_id = serializers.UUIDField(required=False)

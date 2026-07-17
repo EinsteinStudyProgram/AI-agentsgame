@@ -65,18 +65,18 @@ class TestMemoryManager:
         """??????"""
         memory = self.manager.create_memory(
             agent_id=str(self.agent.id),
-            content="???????????????",
+            content="Ate lunch at the cafe, met a friend",
             memory_type="episodic",
         )
         assert memory is not None
-        assert memory.agent_id == self.agent.id
+        assert str(memory.agent_id) == str(self.agent.id)
         assert memory.memory_type == "episodic"
 
     def test_create_memory_default_importance(self):
         """???????? 0"""
         memory = self.manager.create_memory(
             agent_id=str(self.agent.id),
-            content="???????",
+            content="Just some random thought",
         )
         assert 0.0 < memory.importance <= 1.0
 
@@ -84,11 +84,11 @@ class TestMemoryManager:
         """??????????????"""
         low = self.manager.create_memory(
             agent_id=str(self.agent.id),
-            content="?????",
+            content="had breakfast today",
         )
         high = self.manager.create_memory(
             agent_id=str(self.agent.id),
-            content="?????????????????",
+            content="critical dangerous emergency decision promise important never forget",
         )
         assert high.importance > low.importance, f"{high.importance} <= {low.importance}"
 
@@ -96,7 +96,7 @@ class TestMemoryManager:
         """??????"""
         memory = self.manager.create_memory(
             agent_id=str(self.agent.id),
-            content="???????",
+            content="Just some random thought",
             tags=["social", "eat"],
         )
         assert "social" in memory.tags
@@ -106,7 +106,7 @@ class TestMemoryManager:
         """??????"""
         memory = self.manager.create_memory(
             agent_id=str(self.agent.id),
-            content="??",
+            content="test",
             importance=0.95,
         )
         assert memory.importance == 0.95
@@ -144,14 +144,14 @@ class TestMemoryRetriever:
         # ????????????
         self.memories = []
         for i, (content, importance, mtype) in enumerate([
-            ("?????????", 0.3, "episodic"),
-            ("??????????????", 0.8, "episodic"),
-            ("?????", 0.5, "semantic"),
-            ("??????????", 0.7, "reflective"),
-            ("????????", 0.4, "procedural"),
-            ("???????", 0.2, "episodic"),
-            ("?????????", 0.9, "episodic"),
-            ("???????", 0.6, "semantic"),
+            ("Went to the park for a walk", 0.3, "episodic"),
+            ("Critical emergency meeting with the boss", 0.8, "episodic"),
+            ("The sky is blue", 0.5, "semantic"),
+            ("I should be more patient with others", 0.7, "reflective"),
+            ("How to make coffee step by step", 0.4, "procedural"),
+            ("Saw a bird outside window", 0.2, "episodic"),
+            ("A life-changing important promise I made", 0.9, "episodic"),
+            ("Water boils at 100 degrees Celsius", 0.6, "semantic"),
         ]):
             m = self.manager.create_memory(
                 agent_id=str(self.agent.id),

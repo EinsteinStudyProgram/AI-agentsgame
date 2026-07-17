@@ -75,7 +75,7 @@ class MemoryManager:
     def create_memory(self, agent_id, content, memory_type='episodic', importance=None, summary=None, scene_id=None, tags=None, source=None):
         try:
             if importance is None:
-                keywords = ['??','??','??','??','??','??','?','?','important','critical','danger','decision','promise','conflict']
+                keywords = ['important','critical','danger','decision','promise','conflict','emergency','urgent','remember','never','always','love','hate','vow','secret','break','crisis','milestone']
                 matches = sum(1 for kw in keywords if kw in content.lower())
                 importance = min(0.95, 0.3 + matches * 0.1)
             embedding = self.enc._fallback_encode(content)

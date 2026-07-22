@@ -21,8 +21,14 @@ router.register(r"events", viewsets.WorldEventViewSet, basename="world-event")
 # Memory API
 router.register(r"memories", viewsets.MemoryEntryViewSet, basename="memory")
 router.register(r"memory-streams", viewsets.MemoryStreamViewSet, basename="memory-stream")
+
+# Schedule API
+router.register(r"schedules", viewsets.DailyScheduleViewSet, basename="schedule")
+router.register(r"schedule-items", viewsets.ScheduleItemViewSet, basename="schedule-item")
+
 urlpatterns = [
     path("api/", include(router.urls)),
     path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
 ]
+
 

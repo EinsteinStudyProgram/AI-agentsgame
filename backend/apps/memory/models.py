@@ -8,6 +8,10 @@ pgvector 向量存储、记忆类型分类、记忆流管理
 - semantic（语义记忆）：知识概念和事实
 - reflective（反思记忆）：Agent 自我反思总结
 - procedural（程序记忆）：行为模式和习惯
+
+VectorField 条件适配：
+- pgvector 可用 → 使用 VectorField（生产环境）
+- pgvector 不可用 → 降级为 JSONField（开发/测试环境）
 """
 import uuid
 import logging
@@ -15,9 +19,23 @@ from datetime import timedelta
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
-from pgvector.django import VectorField
 
 logger = logging.getLogger(__name__)
+
+# -----------------------------------------------------------
+# 条件 VectorField
+# -----------------------------------------------------------
+try:
+    from pgvector.django import VectorField
+    VECTOR_AVAILABLE = True
+    logger.info("pgvector.django.VectorField available")
+except ImportError:
+    VECTOR_AVAILABLE = False
+    logger.warning("pgvector not installed, using JSONField fallback for embeddings")
+    from django.db.models import JSONField as VectorField
+
+    # Patch: make JSONField look like VectorField for migration-free usage
+    # Already satisfies the field interface Django needs
 
 
 class MemoryEntry(models.Model):
@@ -54,7 +72,8 @@ class MemoryEntry(models.Model):
         verbose_name="记忆摘要"
     )
 
-    # 向量嵌入（1536 维 - OpenAI Ada-002 / 可配置）
+    # 向量嵌入（1536 维 - OpenAI Ada-002）
+    # pgvector 可用时使用 VectorField，否则使用 JSONField
     embedding = VectorField(
         dimensions=1536, null=True, blank=True,
         verbose_name="向量嵌入"

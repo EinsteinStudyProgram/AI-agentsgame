@@ -80,6 +80,63 @@ def _move_agent_sync(agent_id, x, y, scene_id=None):
         return False
 
 
+@sync_to_async
+def _build_chat_messages(agent_id: str, message: str, target_id: str | None = None):
+    """Async-safe: build messages list with ORM data (sync part)"""
+    from backend.apps.agents.models import Agent
+    from backend.apps.agents.services import MBTIEngine
+
+    agent = Agent.objects.get(id=agent_id)
+    system_prompt = MBTIEngine.build_system_prompt(agent)
+
+    position_info = ""
+    try:
+        from backend.apps.world.models import AgentPosition
+        pos = AgentPosition.objects.filter(agent=agent).select_related("scene__district").first()
+        if pos and pos.scene:
+            position_info = f"\n当前所在场景：{pos.scene.name}（{pos.scene.district.name}）"
+    except Exception:
+        pass
+
+    schedule_info = ""
+    try:
+        from backend.apps.agents.services import Planner
+        from backend.apps.agents.models import ScheduleItem
+        sched = Planner.get_current_schedule(agent)
+        if sched:
+            items = ScheduleItem.objects.filter(schedule=sched, status="pending").order_by("start_time")[:3]
+            if items:
+                schedule_info = "\n今日计划：" + ", ".join(
+                    f"{i.start_time.strftime('%H:%M')} {i.activity}" for i in items
+                )
+    except Exception:
+        pass
+
+    target_hint = ""
+    if target_id:
+        try:
+            target = Agent.objects.get(id=target_id)
+            target_hint = f"\n对话对象：{target.name}（{target.mbti_type} 型人格）"
+        except Agent.DoesNotExist:
+            pass
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                f"{system_prompt}\n"
+                f"【当前状态】\n"
+                f"精力值：{agent.energy:.0f}%\n"
+                f"社交能量：{agent.social_energy:.0f}%\n"
+                f"当前状态：{agent.status}{position_info}{schedule_info}{target_hint}\n"
+                f"\n请以第一人称角色身份回复，不超过 200 字。"
+            ),
+        },
+        {"role": "user", "content": message},
+    ]
+    return messages, agent.name
+
+
 # ============================================================
 # Agent Consumer
 # ============================================================
@@ -196,16 +253,53 @@ class AgentConsumer(AsyncWebsocketConsumer):
         }))
 
     async def _handle_chat(self, data):
-        """处理聊天输入"""
+        """处理聊天输入 - 调用 LLM 生成人格化回复"""
         message = data.get("message", "")
         target_id = data.get("target_id")
 
+        if not message:
+            await self._send_error("Empty chat message")
+            return
+
+        # 先发送"typing"状态让客户端知道模型正在生成
         await self.send(text_data=json.dumps({
-            "type": "chat_response",
-            "message": message,
+            "type": "chat_typing",
             "target_id": target_id,
-            "reply": f"[ECHO] {message}",
         }))
+
+        try:
+            # 1) 构建 messages（同步 ORM，sync_to_async）
+            messages, agent_name = await _build_chat_messages(
+                self.agent_id, message, target_id
+            )
+
+            # 2) 调用 LLM（纯 async，在事件循环中直接执行）
+            from backend.apps.agents.services import ModelRouter
+            router = ModelRouter()
+            try:
+                reply = await router.call_llm(
+                    messages, task_type="dialogue", stream=False
+                )
+                error = None
+            except Exception as e:
+                logger.error(f"LLM call failed for agent {self.agent_id}: {e}")
+                reply = f"（{agent_name} 似乎陷入了沉思……）"
+                error = str(e)
+
+            await self.send(text_data=json.dumps({
+                "type": "chat_response",
+                "message": message,
+                "target_id": target_id,
+                "reply": reply,
+                "llm_error": error is not None,
+            }))
+
+            if error:
+                logger.warning(f"LLM fallback used for agent {self.agent_id}: {error}")
+
+        except Exception as e:
+            logger.error(f"_handle_chat error: {e}")
+            await self._send_error(f"Chat failed: {e}")
 
     async def _handle_run_engine(self, data):
         """手动触发 Agent 行为引擎"""

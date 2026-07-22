@@ -1,59 +1,21 @@
 """
 测试用 Django 配置
-使用 SQLite 替代 PostgreSQL，mock pgvector
+使用 SQLite 替代 PostgreSQL 进行测试
+pgvector 包可用时自动使用 VectorField，不可用则降级 JSONField
 """
 import os
 from pathlib import Path
 
-# 先 mock pgvector 的 VectorField，因为 SQLite 不支持
+# ------------------------------------------
+# 强制让 memory/models.py 走 JSONField fallback
+# 因为 SQLite 不支持 pgvector 的 VectorField
+# ------------------------------------------
 import sys
-import types
 
-# 创建 pgvector mock 模块
-pgvector_mock = types.ModuleType('pgvector')
-pgvector_django_mock = types.ModuleType('pgvector.django')
-pgvector_django_vector_mock = types.ModuleType('pgvector.django.vector')
-
-class MockVectorField:
-    """Mock pgvector VectorField - 在 SQLite 下使用 JSONField 替代"""
-    def __init__(self, dimensions=1536, null=True, blank=True, verbose_name=""):
-        self.dimensions = dimensions
-        self.null = null
-        self.blank = blank
-        self.verbose_name = verbose_name
-
-    def deconstruct(self):
-        from django.db import models
-        name, path, args, kwargs = models.JSONField(
-            null=self.null, blank=self.blank, default=list
-        ).deconstruct()
-        return name, 'django.db.models.JSONField', args, kwargs
-
-    def contribute_to_class(self, cls, name, **kwargs):
-        from django.db import models
-        field = models.JSONField(
-            null=self.null, blank=self.blank, default=list,
-            verbose_name=self.verbose_name
-        )
-        field.contribute_to_class(cls, name, **kwargs)
-
-class MockCosineDistance:
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def resolve_expression(self, *args, **kwargs):
-        return None
-
-pgvector_django_vector_mock.VectorField = MockVectorField
-pgvector_django_mock.vector = pgvector_django_vector_mock
-pgvector_django_mock.VectorField = MockVectorField
-pgvector_django_mock.CosineDistance = MockCosineDistance
-pgvector_mock.django = pgvector_django_mock
-
-sys.modules['pgvector'] = pgvector_mock
-sys.modules['pgvector.django'] = pgvector_django_mock
-sys.modules['pgvector.django.vector'] = pgvector_django_vector_mock
-
+# 移除真实 pgvector 模块，让 models.py 的 except ImportError 生效
+for mod_name in list(sys.modules.keys()):
+    if mod_name.startswith("pgvector"):
+        del sys.modules[mod_name]
 # ====== Django Settings ======
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 

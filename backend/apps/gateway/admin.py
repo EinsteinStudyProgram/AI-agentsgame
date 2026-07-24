@@ -1,8 +1,6 @@
 from django.contrib import admin
 from django.contrib import messages
-
 class WebSocketConnectionAdmin(admin.ModelAdmin):
-    @admin.action(description="???? WebSocket ???")
     def show_connections(self, request):
         try:
             from django.core.management import call_command
@@ -11,8 +9,8 @@ class WebSocketConnectionAdmin(admin.ModelAdmin):
             call_command("show_ws_connections", stdout=out)
             self.message_user(request, out.getvalue(), level=messages.INFO)
         except Exception as e:
-            self.message_user(request, f"????????: {e}", level=messages.ERROR)
-
+            self.message_user(request, f"查询 WebSocket 连接失败: {e}", level=messages.ERROR)
+    show_connections.short_description = "查看 WebSocket 连接状态"
     actions = [show_connections]
     has_add_permission = lambda s, r: False
     has_change_permission = lambda s, r: True

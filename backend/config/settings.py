@@ -1,10 +1,15 @@
-﻿"""
-Django ????
+"""
+Django 配置
 """
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+# 加载环境变量
+env_path = BASE_DIR / "env" / ".env.dev"
+load_dotenv(env_path)
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-dev-key")
 DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ("true", "1", "yes")

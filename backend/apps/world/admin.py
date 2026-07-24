@@ -45,14 +45,15 @@ class SceneAdmin(admin.ModelAdmin):
     list_filter = ["district__district_type"]
     search_fields = ["name", "district__name"]
 
-    @admin.display(description="??")
+    @admin.display(description="路径")
     def district_path(self, obj):
         return f"{obj.district.city.world.name} > {obj.district.city.name} > {obj.district.name}"
 
-    @admin.action(description="?????0")
     def reset_occupancy(self, request, qs):
         u = qs.update(current_occupancy=0)
-        self.message_user(request, f"??? {u} ???")
+        self.message_user(request, f"已重置 {u} 个场景的占用人数")
+    reset_occupancy.short_description = "重置选中场景的占用人数为 0"  # type: ignore[attr-defined]
+
     actions = [reset_occupancy]
 
 
@@ -67,3 +68,4 @@ class WorldEventAdmin(admin.ModelAdmin):
     list_display = ["event_type", "scene", "radius", "created_at"]
     list_filter = ["event_type"]
     search_fields = ["event_type", "description"]
+

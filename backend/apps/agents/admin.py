@@ -69,21 +69,21 @@ class AgentAdmin(admin.ModelAdmin):
             color, obj.mbti_type,
         )
 
-    # 自定义动作
-    @admin.action(description="将选中的 Agent 设为活跃状态")
+        # 自定义动作
     def make_active(self, request, queryset):
         updated = queryset.update(status="active")
         self.message_user(request, f"已将 {updated} 个 Agent 设为活跃")
+        make_active.short_description = "将选中的 Agent 设为活跃状态"  # type: ignore[attr-defined]
 
-    @admin.action(description="将选中的 Agent 设为休息状态")
     def make_resting(self, request, queryset):
         updated = queryset.update(status="resting")
         self.message_user(request, f"已将 {updated} 个 Agent 设为休息")
+    make_resting.short_description = "将选中的 Agent 设为休息状态"  # type: ignore[attr-defined]
 
-    @admin.action(description="重置选中 Agent 的能量至满值")
     def reset_energy(self, request, queryset):
         updated = queryset.update(energy=100.0, social_energy=100.0)
         self.message_user(request, f"已重置 {updated} 个 Agent 的能量")
+    reset_energy.short_description = "重置选中 Agent 的能量至满值"  # type: ignore[attr-defined]
 
     actions = [make_active, make_resting, reset_energy]
 
@@ -148,10 +148,10 @@ class DailyScheduleAdmin(admin.ModelAdmin):
     def item_count(self, obj) -> int:
         return obj.items.count()
 
-    @admin.action(description="激活选中的日程")
     def activate_schedule(self, request, queryset):
         updated = queryset.update(is_active=True)
         self.message_user(request, f"已激活 {updated} 个日程")
+        activate_schedule.short_description = "激活选中的日程"  # type: ignore[attr-defined]
 
     actions = [activate_schedule]
 
@@ -171,10 +171,10 @@ class ScheduleItemAdmin(admin.ModelAdmin):
     def agent_name(self, obj) -> str:
         return obj.schedule.agent.name
 
-    @admin.action(description="标记选中为已完成")
     def mark_completed(self, request, queryset):
         updated = queryset.update(status="completed")
         self.message_user(request, f"已将 {updated} 个日程标记为已完成")
+        mark_completed.short_description = "标记选中为已完成"  # type: ignore[attr-defined]
 
     actions = [mark_completed]
 
